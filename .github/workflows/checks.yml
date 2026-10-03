@@ -36,3 +36,42 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=moderate
       - run: npm run build
+  directory-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: directory-ci-fixture
+          POSTGRES_DB: fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixture -d fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://fixture:directory-ci-fixture@localhost:5432/fixture
+      NODE_ENV: development
+      ALLOW_DEMO_SEED: 'true'
+      AI_ENABLED: 'false'
+      ANTHROPIC_API_KEY: ''
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Generate ephemeral signing and seed credentials
+        run: node -e "const f=require('node:fs'),c=require('node:crypto'); for (const k of ['JWT_SECRET','SEED_PASSWORD']) f.appendFileSync(process.env.GITHUB_ENV,k+'='+c.randomBytes(32).toString('hex')+'\n')"
+      - run: npm run db:push
+      - run: npm run db:seed
+      - run: npm run test:directory

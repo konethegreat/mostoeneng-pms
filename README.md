@@ -76,6 +76,12 @@ in `frontend/` for the bundle check. GitHub Actions runs both on pull requests
 and pushes to `main`, with dependency audits for both apps. Authentication tests use synthetic identities and keys;
 they do not exercise PostgreSQL, review workflows, or live AI providers.
 
+`npm run test:directory` in `backend/` requires a disposable seeded PostgreSQL
+database and a configured `JWT_SECRET`. It verifies client directory denial,
+attorney name-only responses, manager team scope and administrator access.
+CI runs it on an isolated database. These checks do not cover the complete review
+lifecycle. Client feedback still has access to the competency framework.
+
 ---
 
 ## Seeded logins (password for all: `SEED_PASSWORD (configured locally)`)
