@@ -8,6 +8,9 @@ API layer specifically.
 
 ## Stack & commands
 
+Use Node 22.12 or newer. CI runs authentication tests and rejects moderate or
+higher dependency audit findings.
+
 Node.js + Express (ESM — `"type": "module"`, use `import`), Prisma ORM, PostgreSQL, JWT
 auth (`jsonwebtoken`), `bcryptjs`, `zod` (available; validation is mostly hand-rolled).
 

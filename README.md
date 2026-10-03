@@ -13,7 +13,7 @@ Built by the AI development team as a reviewable, runnable v1.
 
 | Layer    | Tech                                            |
 |----------|-------------------------------------------------|
-| Frontend | React 18 + Vite + React Router                  |
+| Frontend | React 18 + Vite 7 + React Router 7              |
 | Backend  | Node.js + Express                               |
 | Database | PostgreSQL (via Prisma ORM)                     |
 | Auth     | JWT (access tokens) + bcrypt password hashing   |
@@ -37,7 +37,7 @@ This is Kone Tshivhinda's public development snapshot. Demonstration identities 
 Before seeding, set ALLOW_DEMO_SEED=true and SEED_PASSWORD to a newly generated value of at least 12 characters in backend/.env. Keep JWT_SECRET independently random. Seeds reset database tables and refuse to run in production. Login passwords are entered manually, never prefilled.
 
 
-You need **Node 18+** and **Docker** (for Postgres). If you already run Postgres
+You need **Node 22.12+** and **Docker** (for Postgres). If you already run Postgres
 locally, skip Docker and just point `DATABASE_URL` at your instance.
 
 ```bash
@@ -73,7 +73,7 @@ secret invalidates existing sessions.
 
 Run `npm test` in `backend/` for the authentication tests and `npm run build`
 in `frontend/` for the bundle check. GitHub Actions runs both on pull requests
-and pushes to `main`. Authentication tests use synthetic identities and keys;
+and pushes to `main`, with dependency audits for both apps. Authentication tests use synthetic identities and keys;
 they do not exercise PostgreSQL, review workflows, or live AI providers.
 
 ---

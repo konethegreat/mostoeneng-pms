@@ -4,6 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
+Maintenance baseline: Node 22.12 or newer, Vite 7 and React Router 7. Both apps
+run dependency audits in CI; existing authentication and build checks remain.
+
 Demo Legal PMS — a 360°, institution-wide **performance management system** for a
 professional-services (legal) firm. An attorney **launches** a quarterly review cycle;
 managers, peers, subordinates, a client and the attorney themselves submit feedback;
