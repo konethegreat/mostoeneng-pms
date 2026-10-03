@@ -23,8 +23,11 @@ npm run db:reset   # prisma db push --force-reset && reseed (nuke everything)
 npm run db:studio  # Prisma Studio GUI
 ```
 
-Run `npm test` for synthetic authentication and role-gate tests. There is no lint step
-or database-backed automated workflow suite. To smoke-check syntax: `node --check src/**/*.js`.
+Run `npm test` for synthetic authentication and role-gate tests. On a disposable
+seeded PostgreSQL database, `npm run test:directory` checks directory access for
+all four roles, including another manager's team. CI supplies an isolated database
+for these checks. There is no lint step or full review-workflow suite.
+To smoke-check syntax: `node --check src/**/*.js`.
 `JWT_SECRET` is required and must contain at least 32 characters after trimming;
 generate a random value instead of copying a shared development secret.
 Health check: `GET /api/health`.
@@ -48,6 +51,11 @@ flow — it owns `launch`, the `transition()` factory (submit/finalize/approve),
 `build360()`, and `refreshScore()`.
 
 ## Authorization is two-layered — preserve both
+
+The people and practice-group directories are internal-only. Clients can read the
+competency framework for feedback, but cannot list staff or group contacts.
+Attorneys receive colleague identifiers and names only; managers retain their
+direct-report scope and admins retain their active-directory view.
 
 1. **Route gate:** `requireAuth` on every protected route; `requireRole(...)` on
    privileged ones (e.g. only ADMIN creates cycles; only MANAGER/ADMIN draft/transition).

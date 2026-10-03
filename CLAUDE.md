@@ -82,13 +82,16 @@ Seeded logins, password `SEED_PASSWORD (configured locally)` for all:
   history. After editing `backend/prisma/schema.prisma`, run `npm run db:push` (or
   `npm run db:reset` to wipe + reseed). Adopt `prisma migrate` only if asked.
 - **Authentication tests:** run `npm test` in backend (no database or provider calls).
-  These cover signing configuration, JWT verification and role gates. Other
+  These cover signing configuration, JWT verification and role gates.
+  `npm run test:directory` covers directory roles and manager scope on a disposable
+  seeded PostgreSQL database; CI supplies one. Other
   verification remains `node --check` on backend files, the Vite
   bundle building cleanly, and a live smoke: boot the backend, log in as a seeded user
   (e.g. `t.dlamini@example.test` / `SEED_PASSWORD (configured locally)`) for a JWT, then `curl` the endpoint
   (the local DB is seeded). For import-resolution use
   `node --input-type=module -e "await import('./src/routes/x.js')"`. Do not claim a
-  database-backed workflow was verified from the authentication tests alone.
+  database-backed review workflow was verified from the authentication or
+  directory tests alone.
 - **Windows dev gotcha:** the backend binds `:4000` and only one instance can. Git Bash
   `kill`/`pkill` do **not** reliably stop a backgrounded `node` on Windows (this caused
   `EADDRINUSE` for the user). Free the port with PowerShell:

@@ -3,20 +3,22 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = Router();
+const requireInternalRole = requireRole("ADMIN", "MANAGER", "ATTORNEY");
 
 // List people. Managers/admins see their team / everyone; attorneys see colleagues (names only).
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, requireInternalRole, async (req, res) => {
   const where = { active: true };
   if (req.user.role === "MANAGER") {
     // their direct reports + themselves
     where.OR = [{ managerId: req.user.id }, { id: req.user.id }];
   }
+  if (req.user.role === "ATTORNEY") where.role = { not: "CLIENT" };
   const users = await prisma.user.findMany({
     where,
     orderBy: [{ role: "asc" }, { lastName: "asc" }],
     include: { practiceGroup: true },
   });
-  res.json(users.map(slim));
+  res.json(users.map((user) => slim(user, req.user.role === "ATTORNEY")));
 });
 
 // Competency framework (used by feedback forms)
@@ -26,16 +28,17 @@ router.get("/competencies", requireAuth, async (_req, res) => {
 });
 
 // Practice groups
-router.get("/groups", requireAuth, async (_req, res) => {
+router.get("/groups", requireAuth, requireInternalRole, async (req, res) => {
   const groups = await prisma.practiceGroup.findMany({ include: { head: true, members: true } });
   res.json(groups.map((g) => ({
     id: g.id, name: g.name,
-    head: g.head ? slim(g.head) : null,
+    head: g.head ? slim(g.head, req.user.role === "ATTORNEY") : null,
     memberCount: g.members.length,
   })));
 });
 
-function slim(u) {
+function slim(u, namesOnly = false) {
+  if (namesOnly) return { id: u.id, firstName: u.firstName, lastName: u.lastName };
   return {
     id: u.id, firstName: u.firstName, lastName: u.lastName, email: u.email,
     role: u.role, title: u.title, managerId: u.managerId,
