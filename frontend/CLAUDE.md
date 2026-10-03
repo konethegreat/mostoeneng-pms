@@ -8,7 +8,7 @@ client app specifically.
 
 ## Stack & commands
 
-React 18, React Router v6, Vite 5. **No TypeScript, no CSS framework, no state library** —
+React 18, React Router v7, Vite 7. Use Node 22.12 or newer. **No TypeScript, no CSS framework, no state library** —
 plain `.jsx`, `fetch`, React context, and one hand-written `styles.css`.
 
 ```bash

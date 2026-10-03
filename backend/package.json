@@ -1,6 +1,7 @@
 {
   "name": "mostoeneng-pms-backend",
   "version": "1.0.0",
+  "engines": { "node": ">=22.12.0" },
   "description": "Attorney Performance Management System API",
   "type": "module",
   "main": "src/server.js",
