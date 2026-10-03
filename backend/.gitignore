@@ -1,0 +1,14 @@
+# Defence-in-depth: even if the root .gitignore is moved or edited,
+# secrets here are still excluded.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+*.env
+!.env.example
+
+node_modules/
+dist/
+*.log

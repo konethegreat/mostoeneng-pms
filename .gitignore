@@ -1,0 +1,35 @@
+# ── dependencies / build ──
+node_modules/
+dist/
+build/
+.cache/
+
+# ── secrets / env files (NEVER COMMIT) ──
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+*.env
+# but DO keep the example template
+!.env.example
+
+# ── logs / OS / editor cruft ──
+*.log
+npm-debug.log*
+yarn-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Prisma local artifacts ──
+backend/prisma/*.db
+backend/prisma/migrations/dev.db*
+
+# ── superpowers brainstorm scratch ──
+.superpowers/
+
+# ── design scratch / mockups ──
+docs/mockups/
