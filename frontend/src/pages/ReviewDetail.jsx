@@ -140,29 +140,31 @@ export default function ReviewDetail() {
         {/* 360 sources */}
         <div className="card">
           <div className="card-head"><h2>360° sources</h2></div>
-          <table className="table compact">
-            <tbody>
-              {r.requests.map((q) => (
-                <tr key={q.id}>
-                  <td><span className="pill grey">{sourceLabel[q.reviewerRole]}</span></td>
-                  <td>
-                    <div className="cell-user">
-                      <Avatar seed={q.reviewer.id} name={q.reviewer.name} size={28} />
-                      {q.reviewer.name}
-                    </div>
-                  </td>
-                  <td><StatusPill status={q.status} /></td>
-                  <td>
-                    {aiEnabled && isManager && q.submitted && (
-                      <button className="btn ai small" disabled={organizing === q.id} onClick={() => organize(q.id)}>
-                        {organizing === q.id ? "…" : "✦ Organize"}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="table compact">
+              <tbody>
+                {r.requests.map((q) => (
+                  <tr key={q.id}>
+                    <td><span className="pill grey">{sourceLabel[q.reviewerRole]}</span></td>
+                    <td>
+                      <div className="cell-user">
+                        <Avatar seed={q.reviewer.id} name={q.reviewer.name} size={28} />
+                        {q.reviewer.name}
+                      </div>
+                    </td>
+                    <td><StatusPill status={q.status} /></td>
+                    <td>
+                      {aiEnabled && isManager && q.submitted && (
+                        <button className="btn ai small" disabled={organizing === q.id} onClick={() => organize(q.id)}>
+                          {organizing === q.id ? "…" : "✦ Organize"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {Object.entries(organized).map(([rid, o]) => {
             const q = r.requests.find((x) => x.id === rid);

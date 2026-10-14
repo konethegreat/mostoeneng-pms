@@ -88,35 +88,39 @@ export default function Admin() {
         {!cycles && <p className="loading">Loading…</p>}
         {cycles && cycles.length === 0 && <Empty title="No cycles yet" hint="Create the first review cycle above." />}
         {cycles && cycles.length > 0 && (
-          <table className="table">
-            <thead><tr><th>Name</th><th>Type</th><th>Window</th><th>SLA</th><th>Reviews</th><th>Status</th><th></th></tr></thead>
-            <tbody>
-              {cycles.map((c) => (
-                <tr key={c.id}>
-                  <td><strong>{c.name}</strong></td>
-                  <td>{c.type}</td>
-                  <td><small>{new Date(c.periodStart).toLocaleDateString()} – {new Date(c.periodEnd).toLocaleDateString()}</small></td>
-                  <td>{c.slaDays}d</td>
-                  <td>{c._count?.reviews ?? 0}</td>
-                  <td><span className={`pill ${c.status === "OPEN" ? "green" : "grey"}`}>{c.status}</span></td>
-                  <td>{c.status === "OPEN" && <button className="btn ghost small" onClick={() => closeCycle(c.id)}>Close</button>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Name</th><th>Type</th><th>Window</th><th>SLA</th><th>Reviews</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {cycles.map((c) => (
+                  <tr key={c.id}>
+                    <td><strong>{c.name}</strong></td>
+                    <td>{c.type}</td>
+                    <td><small>{new Date(c.periodStart).toLocaleDateString()} – {new Date(c.periodEnd).toLocaleDateString()}</small></td>
+                    <td>{c.slaDays}d</td>
+                    <td>{c._count?.reviews ?? 0}</td>
+                    <td><span className={`pill ${c.status === "OPEN" ? "green" : "grey"}`}>{c.status}</span></td>
+                    <td>{c.status === "OPEN" && <button className="btn ghost small" onClick={() => closeCycle(c.id)}>Close</button>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       <div className="card">
         <div className="card-head"><h2>Competency framework</h2></div>
-        <table className="table compact">
-          <thead><tr><th>Competency</th><th>Category</th><th>Weight</th></tr></thead>
-          <tbody>
-            {comps.map((c) => (
-              <tr key={c.id}><td><strong>{c.name}</strong><br /><small>{c.description}</small></td><td>{c.category}</td><td>{c.weight.toFixed(1)}×</td></tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table className="table compact">
+            <thead><tr><th>Competency</th><th>Category</th><th>Weight</th></tr></thead>
+            <tbody>
+              {comps.map((c) => (
+                <tr key={c.id}><td><strong>{c.name}</strong><br /><small>{c.description}</small></td><td>{c.category}</td><td>{c.weight.toFixed(1)}×</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

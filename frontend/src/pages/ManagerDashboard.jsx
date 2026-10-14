@@ -55,33 +55,35 @@ export default function ManagerDashboard() {
           <h2>Reviews</h2>
           {data.reviews.length > 0 && <button className="btn small" onClick={exportPdf}>Export PDF</button>}
         </div>
-        <table className="table">
-          <thead>
-            <tr><th>Attorney</th><th>Cycle</th><th>Status</th><th>Completion</th><th>Elapsed</th><th>Score</th><th></th></tr>
-          </thead>
-          <tbody>
-            {data.reviews.map((r) => (
-              <tr key={r.reviewId} className={r.overdue ? "row-warn" : ""}>
-                <td>
-                  <div className="cell-user">
-                    <Avatar name={r.subject} size={32} />
-                    <span><strong>{r.subject}</strong><br /><small>{r.title}</small></span>
-                  </div>
-                </td>
-                <td>{r.cycle}</td>
-                <td><StatusPill status={r.status} /></td>
-                <td>
-                  <div className="mini-bar"><div className="mini-fill" style={{ width: `${r.completionPct}%` }} /></div>
-                  <small>{r.completion.submitted}/{r.completion.total} ({r.completionPct}%)</small>
-                </td>
-                <td>{r.elapsedDays != null ? `${r.elapsedDays}d` : "—"} {r.overdue && <span className="pill red">overdue</span>}</td>
-                <td><ScoreBadge score={r.overallScore} /></td>
-                <td><Link className="btn small" to={`/reviews/${r.reviewId}`}>Open</Link></td>
-              </tr>
-            ))}
-            {data.reviews.length === 0 && <tr><td colSpan={7} className="muted">No reviews yet.</td></tr>}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr><th>Attorney</th><th>Cycle</th><th>Status</th><th>Completion</th><th>Elapsed</th><th>Score</th><th></th></tr>
+            </thead>
+            <tbody>
+              {data.reviews.map((r) => (
+                <tr key={r.reviewId} className={r.overdue ? "row-warn" : ""}>
+                  <td>
+                    <div className="cell-user">
+                      <Avatar name={r.subject} size={32} />
+                      <span><strong>{r.subject}</strong><br /><small>{r.title}</small></span>
+                    </div>
+                  </td>
+                  <td>{r.cycle}</td>
+                  <td><StatusPill status={r.status} /></td>
+                  <td>
+                    <div className="mini-bar"><div className="mini-fill" style={{ width: `${r.completionPct}%` }} /></div>
+                    <small>{r.completion.submitted}/{r.completion.total} ({r.completionPct}%)</small>
+                  </td>
+                  <td>{r.elapsedDays != null ? `${r.elapsedDays}d` : "—"} {r.overdue && <span className="pill red">overdue</span>}</td>
+                  <td><ScoreBadge score={r.overallScore} /></td>
+                  <td><Link className="btn small" to={`/reviews/${r.reviewId}`}>Open</Link></td>
+                </tr>
+              ))}
+              {data.reviews.length === 0 && <tr><td colSpan={7} className="muted">No reviews yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <ActivityFeed />
