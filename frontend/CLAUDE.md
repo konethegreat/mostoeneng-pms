@@ -82,12 +82,20 @@ src/styles.css            All styling (class-based; pill/score/bar tones live he
 - `AiStatusChip.jsx` (top bar) shows whether AI is active and which model, via `useAiStatus()`.
 - **`Avatar.jsx` hashes its seed (SHA-256 + salt) before calling DiceBear** — never pass a raw
   name/id expecting it to be sent in the clear; the hash keeps PII off the third party (POPIA),
-  with a monogram fallback when offline.
+  with a monogram fallback when offline. Builds with `VITE_LOCAL_AVATARS="true"` (the
+  disposable demo in `../scripts/demo.mjs`) always render the monogram.
 
 ## Mind the backend visibility rules
 
 The server hides an attorney's scores, competency breakdown, and final summary until the
-report is `APPROVED`, and returns the review `analytics` block as `null` for non-privileged
-viewers. The UI must tolerate these nulls (e.g. AttorneyDashboard only renders `byCompetency`
-/ `overallScore` / `finalSummary` when `status === "APPROVED"`). Don't assume scores are
-present — guard on status and null before rendering.
+report is `APPROVED` (and drafts always), and returns the review `analytics` block as `null`
+for everyone except the owning manager, admins and, after approval, the attorney. Other
+reviewers receive only their own request, with empty `events`/`goals`. The UI must tolerate
+these nulls (e.g. AttorneyDashboard only renders `byCompetency` / `overallScore` /
+`finalSummary` when `status === "APPROVED"`; ReviewDetail picks its layout from
+`isManager`/`isSubject` and shows the PDF button only with `analytics`). Don't assume scores
+are present — guard on status and null before rendering.
+
+Feedback requests carry `open`: false once the report is finalized or approved.
+`FeedbackForm` then renders read-only (disabled scale buttons, no submit), and the lists
+offer "View" instead of "Edit". Send-back takes an optional reason from the manager card.

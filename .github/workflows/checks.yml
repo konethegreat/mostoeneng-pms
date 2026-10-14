@@ -75,3 +75,26 @@ jobs:
       - run: npm run db:push
       - run: npm run db:seed
       - run: npm run test:directory
+  review-workflow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm ci
+        working-directory: frontend
+      - name: Fictional review workflow over real HTTP on a disposable PostgreSQL 16 container
+        run: npm run test:workflow
+        working-directory: backend
+      - name: Demo launcher check (compiled SPA, /api proxy, sign-in and cleanup)
+        run: node scripts/demo.mjs --check
+      - name: No demo database containers left behind
+        run: test -z "$(docker ps -aq --filter label=mostoeneng-pms.disposable-demo=true)"

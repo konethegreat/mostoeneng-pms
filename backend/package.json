@@ -8,6 +8,7 @@
   "scripts": {
     "test": "node --test tests/*.test.js",
     "test:directory": "node --test tests/integration/directory.test.js",
+    "test:workflow": "node --test tests/integration/review-workflow.test.js",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "db:push": "prisma db push",

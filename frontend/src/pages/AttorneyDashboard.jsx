@@ -129,7 +129,13 @@ export default function AttorneyDashboard() {
             <Link className="btn small" to={`/reviews/${c.reviewId}`}>View detail</Link>
           </div>
         ))}
-        {data.cards.length === 0 && <p className="muted">No reviews yet — launch one above.</p>}
+        {data.cards.length === 0 && (
+          <p className="muted">
+            {data.canLaunch
+              ? "No reviews yet — launch one above."
+              : "No reviews yet. A reviewing manager must be assigned before you can launch one."}
+          </p>
+        )}
       </div>
 
       <ActivityFeed />

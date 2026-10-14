@@ -570,6 +570,9 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
   color: var(--brass-soft);
   border-color: var(--ink);
 }
+/* Read-only (closed) forms: keep the chosen score prominent, fade the rest. */
+.scale-btn:disabled { cursor: not-allowed; transform: none; }
+.scale-btn:disabled:not(.selected) { opacity: 0.45; border-color: var(--line-2); }
 
 label {
   display: block;
@@ -759,6 +762,9 @@ textarea { resize: vertical; min-height: 96px; }
   transition: border-color var(--t-fast), background-color var(--t-fast);
 }
 .demo-btn:hover { border-color: var(--ink-2); background: var(--surface-2); }
+.demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.demo-grid .demo-btn { margin-bottom: 0; }
+.demo-grid .demo-btn span { overflow-wrap: anywhere; }
 .demo-btn strong { font-weight: 600; font-size: 0.88rem; }
 .demo-btn span { color: var(--muted); font-size: 0.78rem; font-family: var(--mono); margin-top: 2px; }
 
@@ -965,6 +971,11 @@ textarea { resize: vertical; min-height: 96px; }
   border-radius: 0 var(--r) var(--r) 0; padding: 12px 16px; margin-bottom: 20px; color: var(--ink-2);
 }
 .sla-banner strong { color: var(--amber); }
+.notice {
+  background: var(--slate-soft); border: 1px solid #c7d2e0; border-left: 3px solid var(--slate);
+  border-radius: 0 var(--r) var(--r) 0; padding: 11px 15px; margin-bottom: 16px; color: var(--ink-2); font-size: 0.9rem;
+}
+.send-back-note { flex: 1 1 260px; margin-top: 0; }
 
 /* Admin */
 .admin-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; align-items: end; }

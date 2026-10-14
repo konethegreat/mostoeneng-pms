@@ -24,6 +24,16 @@ const LOCAL_QUOTES = [
   { text: "Success is the sum of small efforts repeated day in and day out.", author: "Robert Collier" },
 ];
 
+// EXTERNAL_WIDGETS_ENABLED="false" keeps the widgets local: a curated quote,
+// no weather and no holiday markers, and no upstream request of any kind.
+export function externalWidgetsEnabled() {
+  return process.env.EXTERNAL_WIDGETS_ENABLED !== "false";
+}
+
+function localQuote() {
+  return LOCAL_QUOTES[Math.floor(Math.random() * LOCAL_QUOTES.length)];
+}
+
 const cache = new Map();
 async function cached(key, ttlMs, fn) {
   const hit = cache.get(key);
@@ -47,13 +57,14 @@ async function fetchJson(url, ms = 4000) {
 
 // ── Greeting widget: a quote + current office weather (cached 30 min) ──
 router.get("/greeting", requireAuth, async (_req, res) => {
+  if (!externalWidgetsEnabled()) return res.json({ quote: localQuote(), weather: null });
   const data = await cached("greeting", 30 * 60 * 1000, async () => {
     const out = { quote: null, weather: null };
     try {
       const q = await fetchJson("https://zenquotes.io/api/random");
       if (Array.isArray(q) && q[0]?.q) out.quote = { text: q[0].q, author: q[0].a };
     } catch { /* fall through to local */ }
-    if (!out.quote) out.quote = LOCAL_QUOTES[Math.floor(Math.random() * LOCAL_QUOTES.length)];
+    if (!out.quote) out.quote = localQuote();
     try {
       const w = await fetchJson(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code`);
       if (w.current) out.weather = { tempC: w.current.temperature_2m, code: w.current.weather_code };
@@ -65,6 +76,7 @@ router.get("/greeting", requireAuth, async (_req, res) => {
 
 // ── Public holidays for a year/country (cached 24h; empty array on failure) ──
 router.get("/holidays", requireAuth, async (req, res) => {
+  if (!externalWidgetsEnabled()) return res.json([]);
   const year = Number(req.query.year) || new Date().getFullYear();
   const country = (req.query.country || COUNTRY).toUpperCase();
   try {

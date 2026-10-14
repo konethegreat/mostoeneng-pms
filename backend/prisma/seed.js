@@ -1,6 +1,7 @@
-// Seeds a realistic firm: one practice group, a manager, attorneys, a client,
+// Seeds a realistic firm: a practice group with a manager, attorneys and a client,
 // the 8-competency framework, an APPROVED Q1 report and an in-flight Q2 cycle
 // with partial 360 feedback (so completion-rate analytics have something to show).
+// A second, smaller practice group gives cross-team access checks a real manager.
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -86,6 +87,21 @@ async function main() {
     data: { email: "client@client.example.test", passwordHash: PW, firstName: "Grace", lastName: "Adeyemi", role: "CLIENT", title: "General Counsel", clientAccount: "Example Client" },
   });
 
+  // A separate team: neither person reviews or manages anyone above.
+  const litigation = await prisma.practiceGroup.create({
+    data: { name: "Litigation & Dispute Resolution" },
+  });
+  const otherManager = await prisma.user.create({
+    data: {
+      email: "z.mthembu@example.test", passwordHash: PW, firstName: "Zanele", lastName: "Mthembu",
+      role: "MANAGER", title: "Partner", practiceGroupId: litigation.id,
+    },
+  });
+  await prisma.practiceGroup.update({ where: { id: litigation.id }, data: { headId: otherManager.id } });
+  const vanWyk = await prisma.user.create({
+    data: { email: "j.vanwyk@example.test", passwordHash: PW, firstName: "Johan", lastName: "van Wyk", role: "ATTORNEY", title: "Associate", managerId: otherManager.id, practiceGroupId: litigation.id },
+  });
+
   console.log("Seeding cycles…");
   const annual = await prisma.reviewCycle.create({
     data: { name: "FY2026 Annual", type: "ANNUAL", periodStart: new Date("2026-01-01"), periodEnd: new Date("2026-12-31"), slaDays: 45 },
@@ -97,11 +113,13 @@ async function main() {
     data: { name: "Q2 2026", type: "QUARTERLY", periodStart: new Date("2026-04-01"), periodEnd: new Date("2026-06-30"), slaDays: 30, status: "OPEN", parentId: annual.id },
   });
 
-  // Helper: create a review and fan out 360 requests
+  // Helper: create a review and fan out 360 requests. Requests exist only once a
+  // review is launched, so a NOT_STARTED review gets none (launch creates them).
   async function createReview(subject, cycle, managerUser, opts = {}) {
     const review = await prisma.performanceReview.create({
       data: { subjectId: subject.id, cycleId: cycle.id, managerId: managerUser.id, status: opts.status || "NOT_STARTED" },
     });
+    if (review.status === "NOT_STARTED") return review;
 
     const reviewers = [
       { user: subject, role: "SELF", weight: 0.8 },
@@ -190,6 +208,8 @@ async function main() {
 
   // Botha: not yet launched (the launch button is live for her)
   await createReview(botha, q2, manager, { status: "NOT_STARTED" });
+  // Van Wyk: the other team's not-yet-launched review
+  await createReview(vanWyk, q2, otherManager, { status: "NOT_STARTED" });
 
   console.log("Done. Login with configured SEED_PASSWORD");
 }
