@@ -2,12 +2,15 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma.js";
 import { signToken, requireAuth } from "../middleware/auth.js";
+import { asyncRoute } from "../lib/http.js";
 
 const router = Router();
 
-router.post("/login", async (req, res) => {
+router.post("/login", asyncRoute(async (req, res) => {
   const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+  if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
+    return res.status(400).json({ error: "Email and password required" });
+  }
 
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (!user || !user.active) return res.status(401).json({ error: "Invalid credentials" });
@@ -17,16 +20,16 @@ router.post("/login", async (req, res) => {
 
   const token = signToken(user);
   res.json({ token, user: publicUser(user) });
-});
+}));
 
-router.get("/me", requireAuth, async (req, res) => {
+router.get("/me", requireAuth, asyncRoute(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
     include: { practiceGroup: true, manager: true },
   });
   if (!user) return res.status(404).json({ error: "Not found" });
   res.json({ user: publicUser(user) });
-});
+}));
 
 function publicUser(u) {
   return {

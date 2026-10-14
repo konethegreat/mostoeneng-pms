@@ -2,11 +2,12 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { completionRate, cycleTime, computeOverallScore, competencyBreakdown } from "../lib/scoring.js";
+import { asyncRoute } from "../lib/http.js";
 
 const router = Router();
 
 // ── Manager / admin dashboard: team-wide rollups ──
-router.get("/manager", requireAuth, async (req, res) => {
+router.get("/manager", requireAuth, asyncRoute(async (req, res) => {
   if (!["MANAGER", "ADMIN"].includes(req.user.role)) return res.status(403).json({ error: "Forbidden" });
 
   const where = req.user.role === "ADMIN" ? {} : { managerId: req.user.id };
@@ -48,10 +49,10 @@ router.get("/manager", requireAuth, async (req, res) => {
     statusCounts,
     reviews: rows,
   });
-});
+}));
 
 // ── Attorney dashboard: my own performance ──
-router.get("/attorney", requireAuth, async (req, res) => {
+router.get("/attorney", requireAuth, asyncRoute(async (req, res) => {
   const reviews = await prisma.performanceReview.findMany({
     where: { subjectId: req.user.id },
     include: {
@@ -61,8 +62,13 @@ router.get("/attorney", requireAuth, async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
 
-  // Open cycles where I have NOT launched yet -> the launch button targets
-  const openCycles = await prisma.reviewCycle.findMany({ where: { status: "OPEN" } });
+  // Launch targets: open quarterly cycles I have not launched yet (the annual
+  // report is a rollup), offered only once a reviewing manager is assigned.
+  const me = await prisma.user.findUnique({ where: { id: req.user.id }, select: { managerId: true } });
+  const canLaunch = !!me?.managerId;
+  const openCycles = canLaunch
+    ? await prisma.reviewCycle.findMany({ where: { status: "OPEN", type: "QUARTERLY" }, orderBy: { periodStart: "asc" } })
+    : [];
   const myCycleIds = new Set(reviews.filter((r) => r.launchedAt).map((r) => r.cycleId));
   const launchable = openCycles.filter((c) => !myCycleIds.has(c.id));
 
@@ -85,12 +91,22 @@ router.get("/attorney", requireAuth, async (req, res) => {
     .sort((a, b) => new Date(a.cycle.periodStart) - new Date(b.cycle.periodStart))
     .map((r) => ({ cycle: r.cycle.name, score: r.overallScore }));
 
-  res.json({ launchable, cards, trend });
-});
+  res.json({ launchable, canLaunch, cards, trend });
+}));
+
+// The attorney, an admin, the attorney's line manager, or a manager who owns one
+// of their reviews. Other managers are refused like any other colleague.
+async function canSeeRollup(user, attorneyId) {
+  if (user.role === "ADMIN" || user.id === attorneyId) return true;
+  if (user.role !== "MANAGER") return false;
+  const attorney = await prisma.user.findUnique({ where: { id: attorneyId }, select: { managerId: true } });
+  if (attorney?.managerId === user.id) return true;
+  return (await prisma.performanceReview.count({ where: { subjectId: attorneyId, managerId: user.id } })) > 0;
+}
 
 // ── Annual rollup: average the child (quarterly) approved reports ──
-router.get("/rollup/:attorneyId/:annualCycleId", requireAuth, async (req, res) => {
-  if (!["MANAGER", "ADMIN"].includes(req.user.role) && req.user.id !== req.params.attorneyId) {
+router.get("/rollup/:attorneyId/:annualCycleId", requireAuth, asyncRoute(async (req, res) => {
+  if (!(await canSeeRollup(req.user, req.params.attorneyId))) {
     return res.status(403).json({ error: "Forbidden" });
   }
   const annual = await prisma.reviewCycle.findUnique({ where: { id: req.params.annualCycleId }, include: { children: true } });
@@ -100,6 +116,7 @@ router.get("/rollup/:attorneyId/:annualCycleId", requireAuth, async (req, res) =
   const childReviews = await prisma.performanceReview.findMany({
     where: { subjectId: req.params.attorneyId, cycleId: { in: childIds }, status: "APPROVED" },
     include: { cycle: true },
+    orderBy: { cycle: { periodStart: "asc" } },
   });
 
   const scores = childReviews.map((r) => r.overallScore).filter((s) => s != null);
@@ -110,7 +127,7 @@ router.get("/rollup/:attorneyId/:annualCycleId", requireAuth, async (req, res) =
     quartersComplete: childReviews.length,
     quartersTotal: childIds.length,
   });
-});
+}));
 
 function avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
 
