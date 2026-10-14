@@ -207,9 +207,14 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
   gap: 14px;
 }
 .card-head small { color: var(--muted); }
+/* Phones: narrower page and card gutters leave more room for content. */
+@media (max-width: 720px) {
+  .container { padding-left: 16px; padding-right: 16px; }
+  .card { padding-left: 18px; padding-right: 18px; }
+}
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
-@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } }
 
 /* =========================================================================
    Stats — asymmetric bento. Big serif number, small label.
@@ -281,6 +286,8 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
 .table tr:last-child td { border-bottom: 0; }
 .table tr.row-warn { background: var(--surface-2); }
 .table small { color: var(--muted); }
+/* Wide tables scroll sideways inside their card instead of widening the page. */
+.table-wrap { overflow-x: auto; }
 
 /* =========================================================================
    Pills & badges — dot + label, not screaming color blocks.
@@ -369,6 +376,11 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
   font-family: var(--mono);
   font-weight: 500;
   font-size: 0.86rem;
+}
+/* Phones: each label sits above its bar instead of in a fixed 180px column. */
+@media (max-width: 720px) {
+  .bar-row { grid-template-columns: minmax(0, 1fr) 44px; row-gap: 4px; }
+  .bar-label { grid-column: 1 / -1; }
 }
 
 .mini-bar {
@@ -528,6 +540,7 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
 .feedback-row:last-child { border-bottom: none; }
 .feedback-row small { display: block; color: var(--muted); }
 .feedback-row-actions { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 720px) { .feedback-row, .feedback-row-actions { flex-wrap: wrap; } }
 
 /* =========================================================================
    Rating form — the scale buttons read as a deliberate ruler
@@ -573,6 +586,12 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
 /* Read-only (closed) forms: keep the chosen score prominent, fade the rest. */
 .scale-btn:disabled { cursor: not-allowed; transform: none; }
 .scale-btn:disabled:not(.selected) { opacity: 0.45; border-color: var(--line-2); }
+/* Phones: the scale drops below its competency and the buttons share the row. */
+@media (max-width: 720px) {
+  .competency-rate { flex-wrap: wrap; }
+  .scale { width: 100%; }
+  .scale-btn { flex: 1; width: auto; }
+}
 
 label {
   display: block;
