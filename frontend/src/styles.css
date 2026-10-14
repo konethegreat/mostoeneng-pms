@@ -490,19 +490,22 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
 .trend {
   display: flex;
   gap: 22px;
-  align-items: flex-end;
-  height: 160px;
+  align-items: flex-start;
   padding-top: 14px;
   border-bottom: 1px solid var(--line);
 }
+/* A fixed-height first row gives every bar's percentage height the same scale,
+   even when a label wraps; with one-line labels the chart stays 160px tall. */
 .trend-col {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-rows: 94px auto auto;
+  justify-items: center;
   gap: 6px;
   flex: 1;
   max-width: 84px;
 }
 .trend-bar {
+  align-self: end;
   width: 100%;
   background: var(--ink);
   border-radius: var(--r-sm) var(--r-sm) 0 0;
