@@ -184,6 +184,24 @@ h3.sub::before { content: "— "; color: var(--muted-2); }
 .user-meta strong { font-weight: 600; font-size: 0.92rem; }
 .user-meta small  { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 1px; }
 
+/* Narrower screens: the nav drops to its own row beneath the brand and actions. */
+@media (max-width: 960px) {
+  .topbar { flex-wrap: wrap; height: auto; padding: 10px 28px 0; row-gap: 8px; }
+  .topbar .ai-chip { margin-left: auto; }
+  .topbar .nav { order: 1; flex: 1 0 100%; margin-left: 0; flex-wrap: wrap; }
+}
+/* Phones: the brand keeps its mark and the user chip its avatar and Sign out;
+   the notifications panel spans the bar instead of hanging off the bell. */
+@media (max-width: 720px) {
+  .topbar { position: relative; padding: 10px 16px 0; column-gap: 8px; }
+  .topbar .brand > div, .topbar .user-meta { display: none; }
+  .topbar .user-chip { gap: 8px; }
+  .topbar .user-chip .btn { padding: 7px 10px; }
+  .topbar .nav a { padding: 8px 10px; }
+  .topbar .bell { position: static; }
+  .topbar .notif-dropdown { left: 16px; right: 16px; top: 56px; width: auto; }
+}
+
 .container { max-width: 1140px; margin: 0 auto; padding: 36px 28px 96px; }
 
 /* =========================================================================
