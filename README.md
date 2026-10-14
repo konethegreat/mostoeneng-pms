@@ -30,6 +30,25 @@ mostoeneng-pms/
 
 ---
 
+## Synthetic walkthrough
+
+To try the review → feedback → report flow without configuring anything, run the
+disposable demo. It needs Node 22.12+ and a running Docker engine:
+
+```bash
+npm --prefix backend ci
+npm --prefix frontend ci
+node scripts/demo.mjs
+```
+
+It starts a throwaway PostgreSQL 16 container and the real API on `127.0.0.1`, seeds the
+fictional firm with a password printed for that run only, switches AI and the external
+widget APIs off, and serves the app at http://127.0.0.1:4177. Ctrl+C removes the
+container and build output. [docs/DEMO.md](docs/DEMO.md) walks through a quarterly
+review step by step, with screenshots and the limits of what it demonstrates.
+
+---
+
 ## Quick start
 
 This is Kone Tshivhinda's public development snapshot. Demonstration identities use example.test addresses; no live firm database is included.
@@ -79,8 +98,16 @@ they do not exercise PostgreSQL, review workflows, or live AI providers.
 `npm run test:directory` in `backend/` requires a disposable seeded PostgreSQL
 database and a configured `JWT_SECRET`. It verifies client directory denial,
 attorney name-only responses, manager team scope and administrator access.
-CI runs it on an isolated database. These checks do not cover the complete review
-lifecycle. Client feedback still has access to the competency framework.
+CI runs it on an isolated database. Client feedback still has access to the
+competency framework.
+
+`npm run test:workflow` in `backend/` needs Docker. It starts its own PostgreSQL 16
+container and the real API process, signs in over HTTP as nine fictional accounts and
+walks one quarterly review: cycle creation, launch, 360 feedback, drafting,
+finalization, send-back, approval and the annual rollup, checking the role boundaries
+at each step (26 results). `node scripts/demo.mjs --check` checks the demo launcher.
+CI runs both with AI switched off. Neither exercises live AI providers, SSO, email
+delivery or a hosted deployment.
 
 ---
 
@@ -92,7 +119,11 @@ lifecycle. Client feedback still has access to the competency framework.
 | Manager   | t.dlamini@example.test        | Team dashboard, draft/approve reports      |
 | Attorney  | n.khumalo@example.test        | Own dashboard, launch button, self-review  |
 | Attorney  | s.naidoo@example.test         | Own dashboard (mid-cycle, partial feedback)|
+| Attorney  | l.botha@example.test          | Own dashboard (Q2 not launched yet)        |
+| Attorney  | p.moyo@example.test           | Candidate attorney reporting to N. Khumalo |
 | Client    | client@client.example.test       | Client portal: feedback they owe           |
+| Manager   | z.mthembu@example.test        | A second team (Litigation)                 |
+| Attorney  | j.vanwyk@example.test         | The second team's attorney                 |
 
 ---
 
@@ -107,17 +138,31 @@ An attorney opens a review by pressing **Launch Review**. At that instant the sy
 Everything downstream — reminders, completion %, cycle-time analytics — is measured
 from that timestamp. See `docs/CADENCE.md` for the industry-standard cadence we adopted.
 
+Only open quarterly cycles are launched; the annual report rolls up approved quarters.
+A reviewing manager must be assigned first, so nobody owns their own report. Peers are
+up to three attorneys who share the practice group and manager; direct reports are asked
+once, as subordinates. The client is the first active client account (demo-grade).
+
 ---
 
 ## Report lifecycle
 
 ```
 DRAFT ──submit──▶ IN_REVIEW ──finalize──▶ FINALIZED ──approve──▶ APPROVED
-  ▲                                                                  │
-  └────────────────────── (manager can send back) ◀─────────────────┘
+  ▲                   │                       │
+  └──── send back ◀───┴───────────────────────┘
 ```
 
-Approved quarterly reports are immutable and feed the **annual rollup**.
+Only the owning manager or an administrator moves a report, never the attorney being
+reviewed. A draft can also be finalized directly. Feedback is collected from launch until
+the report is finalized; sending it back (with a reason recorded in the history) reopens
+feedback. Approved quarterly reports are immutable and feed the **annual rollup**.
+
+| Viewer | Scores and breakdown | Drafts | Final summary | Reviewers listed | History |
+|---|---|---|---|---|---|
+| Owning manager, admin | Yes | Yes | Yes | All, with contact details | Yes |
+| The attorney reviewed | After approval | No | After approval | All, names only | Yes |
+| Any other reviewer | No | No | No | Their own request only | No |
 
 ---
 
@@ -178,6 +223,7 @@ Configure the office location and holiday country in `backend/.env`:
 HOLIDAY_COUNTRY="ZA"           # ISO country code (Nager.Date)
 OFFICE_LAT="-26.2041"          # weather location (Open-Meteo) — default Johannesburg
 OFFICE_LON="28.0473"
+EXTERNAL_WIDGETS_ENABLED="false" # optional: local quote only, no upstream requests
 ```
 
 The top bar also shows an **AI status chip** indicating whether AI is active and which model.

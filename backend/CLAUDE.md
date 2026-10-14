@@ -26,7 +26,10 @@ npm run db:studio  # Prisma Studio GUI
 Run `npm test` for synthetic authentication and role-gate tests. On a disposable
 seeded PostgreSQL database, `npm run test:directory` checks directory access for
 all four roles, including another manager's team. CI supplies an isolated database
-for these checks. There is no lint step or full review-workflow suite.
+for these checks. `npm run test:workflow` needs Docker: through `../scripts/demo-runtime.mjs`
+it starts a labelled throwaway PostgreSQL 16 container, pushes the schema, seeds, runs
+`src/server.js` on loopback with AI and widget APIs off, and walks the quarterly review
+over real HTTP (26 results). It ignores the caller's `DATABASE_URL`. There is no lint step.
 To smoke-check syntax: `node --check src/**/*.js`.
 `JWT_SECRET` is required and must contain at least 32 characters after trimming;
 generate a random value instead of copying a shared development secret.
@@ -41,6 +44,7 @@ src/routes/*.js            HTTP handlers + validation + authorization (auth, use
                            reviews, feedback, dashboard)
 src/lib/scoring.js         Pure functions: computeOverallScore, competencyBreakdown,
                            bySourceBreakdown, completionRate, cycleTime
+src/lib/http.js            asyncRoute (rejections → error handler), textProblem, LIMITS
 src/lib/prisma.js          Singleton PrismaClient
 prisma/schema.prisma       The full relational model (read this first for any data change)
 prisma/seed.js             8-competency framework + group + users + Q1 APPROVED + Q2 in-flight
@@ -60,13 +64,21 @@ direct-report scope and admins retain their active-directory view.
 1. **Route gate:** `requireAuth` on every protected route; `requireRole(...)` on
    privileged ones (e.g. only ADMIN creates cycles; only MANAGER/ADMIN draft/transition).
 2. **Row-level checks inside handlers**, which the role gate does NOT cover:
-   - A `MANAGER` may only act on reviews where `review.managerId === user.id`
-     (ADMIN bypasses). See `canView()` and the per-handler `managerId` checks.
-   - Reviewers (peer/client/subordinate) can fetch a review *skeleton*, but the
-     `analytics` block is returned `null` unless caller is the subject, owning manager,
-     or admin. See the `privileged` flag in `GET /api/reviews/:id`.
-   - The attorney (subject) does not get scores/summary until status is `APPROVED`
-     (enforced in `dashboard.js` `/attorney`, not just the client).
+   - Only the owning manager or an ADMIN may draft, submit, finalize, approve or send
+     back a review, and never its subject (`managesReview()` in `reviews.js`). This
+     includes `send-back`, which once had no ownership check.
+   - `GET /api/reviews/:id` has three views. Owning manager/admin: everything. The
+     subject: no drafts ever, and no `overallScore`/`finalSummary`/`analytics` until
+     `APPROVED`; reviewers listed by name only. Any other reviewer: a skeleton with only
+     their own request and no events, goals, scores or narratives. The list endpoint and
+     `dashboard.js` `/attorney` hide the subject's scores the same way.
+   - `/dashboard/rollup/:attorneyId/:annualCycleId`: the attorney, an admin, their line
+     manager or a manager owning one of their reviews (`canSeeRollup()`); other managers
+     get 403.
+   - Feedback is accepted only while the review is `LAUNCHED`, `DRAFT` or `IN_REVIEW`
+     (`open` on `/feedback/mine` and `/feedback/request/:id`); finalizing closes it and
+     send-back reopens it. Submissions are validated (whole-number scores 1-5, distinct
+     active competencies, text limits) and replaced inside one transaction.
 
 When adding endpoints that expose review or feedback data, replicate this pattern — a
 role gate alone is not sufficient.
@@ -126,10 +138,18 @@ src/routes/activity.js      GET / — role-scoped recent ReportEvents (clients: 
   `refreshScore()` on draft-save and finalize — it is not recomputed on every read. If you
   change scoring math, call `refreshScore()` (or reseed) or stored scores go stale.
 - **`build360()` reviewer selection is heuristic/demo-grade:** self, manager, up to 3 peers
-  in the same practice group, up to 3 subordinates, and the *first active client* (real
-  client↔attorney matching needs matter data — see HANDOVER open questions).
+  who share the practice group *and* manager (so direct reports are asked only once, as
+  subordinates), up to 3 subordinates, and the *first active client* (real
+  client↔attorney matching needs matter data). Launch requires an open `QUARTERLY` cycle
+  and a `managerId`; annual results come from the rollup.
+- **Express 4 does not catch async rejections.** Wrap new handlers in `asyncRoute()`
+  (`src/lib/http.js`) so a database error reaches the error handler instead of leaving
+  the request hanging. Validate input first and answer 400/409 explicitly.
 - **Uniqueness constraints** to respect: one review per `(subjectId, cycleId)`; one request
   per `(reviewId, reviewerId, reviewerRole)`; one rating per `(responseId, competencyId)`.
   `launch` and feedback-submit use `upsert`/replace to stay idempotent.
 - **Env:** `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `PORT`, `CLIENT_ORIGIN`
-  (see `.env.example`). `.env` is gitignored; never commit it.
+  (see `.env.example`). Optional `HOST` binds one interface (the demo uses `127.0.0.1`);
+  `EXTERNAL_WIDGETS_ENABLED="false"` stops the quote/weather/holiday upstream calls.
+  `/api/health` reports `aiEnabled` and `externalWidgets`. `.env` is gitignored; never
+  commit it.

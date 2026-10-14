@@ -47,22 +47,32 @@ npm install
 npm run dev
 ```
 
+Or, with Docker running, `node scripts/demo.mjs` from the repo root starts a disposable
+PostgreSQL 16 container, the API on `127.0.0.1` with AI and widget APIs off, and the
+built SPA on http://127.0.0.1:4177 (`--check` probes it and exits). `scripts/demo-runtime.mjs`
+is shared with the HTTP workflow test. Walkthrough: `docs/DEMO.md`.
+
 Seeded logins, password `SEED_PASSWORD (configured locally)` for all:
 `admin@example.test` (ADMIN), `t.dlamini@example.test` (MANAGER),
 `n.khumalo@example.test` (ATTORNEY), `s.naidoo@example.test` (ATTORNEY, mid-cycle),
-`client@client.example.test` (CLIENT).
+`l.botha@example.test` (ATTORNEY, Q2 not launched), `p.moyo@example.test` (ATTORNEY,
+reports to Khumalo), `client@client.example.test` (CLIENT), and a second team:
+`z.mthembu@example.test` (MANAGER) with `j.vanwyk@example.test` (ATTORNEY).
 
 ## Core domain model (the big picture)
 
 - **Roles:** `ADMIN`, `MANAGER`, `ATTORNEY`, `CLIENT`. The 360 feedback *sources* are a
   separate enum: `SELF`, `MANAGER`, `PEER`, `SUBORDINATE`, `CLIENT`.
 - **Review lifecycle:** `NOT_STARTED → LAUNCHED → DRAFT → IN_REVIEW → FINALIZED → APPROVED`.
-  A manager can `send-back` (→ `DRAFT`) any time before `APPROVED`. Approved reports are
-  immutable and feed the annual rollup.
+  The owning manager (or an admin, never the subject) can `send-back` an `IN_REVIEW` or
+  `FINALIZED` report to `DRAFT`, with an optional reason; that reopens feedback. Drafts
+  need a launched review. Feedback is accepted while `LAUNCHED`/`DRAFT`/`IN_REVIEW`.
+  Approved reports are immutable and feed the annual rollup.
 - **The "launch button":** an attorney pressing launch (`POST /api/reviews/launch`) is the
   spine of the whole system. It stamps `launchedAt`, fans out one `FeedbackRequest` per 360
   source, and anchors **all** SLA / completion-rate / cycle-time analytics. Treat
   `launchedAt` as load-bearing — analytics in `backend/src/lib/scoring.js` measure from it.
+  Only open `QUARTERLY` cycles can be launched, and only by someone with a `managerId`.
 - **Scoring:** composite score = weighted mean of every rating, weight =
   `competency.weight × response.sourceWeight`. Source weights: Manager 1.5, Client 0.9,
   Peer 1.0, Subordinate 1.0, Self 0.8. This encodes two firm policies (which competencies
@@ -74,8 +84,10 @@ Seeded logins, password `SEED_PASSWORD (configured locally)` for all:
 ## Cross-cutting conventions
 
 - **Visibility rule (enforced server-side):** an attorney does **not** see their own scores,
-  competency breakdown, or final summary until the report is `APPROVED`. Don't surface
-  mid-cycle scores in the attorney UI/API.
+  competency breakdown, or final summary until the report is `APPROVED`, and never the
+  drafts. `GET /api/reviews/:id`, the review list and the attorney dashboard all apply it;
+  other reviewers get a skeleton with only their own request. Don't surface mid-cycle
+  scores in the attorney UI/API.
 - **Auth:** JWT bearer tokens, 8h expiry, stored in `localStorage`. There are no refresh
   tokens or revocation — by design for v1.
 - **Schema changes use `prisma db push`, not `prisma migrate`.** There is no migration
@@ -84,14 +96,16 @@ Seeded logins, password `SEED_PASSWORD (configured locally)` for all:
 - **Authentication tests:** run `npm test` in backend (no database or provider calls).
   These cover signing configuration, JWT verification and role gates.
   `npm run test:directory` covers directory roles and manager scope on a disposable
-  seeded PostgreSQL database; CI supplies one. Other
+  seeded PostgreSQL database; CI supplies one. `npm run test:workflow` (needs Docker)
+  starts its own container and the real API and walks the whole quarterly review over
+  HTTP with its role boundaries. Other
   verification remains `node --check` on backend files, the Vite
   bundle building cleanly, and a live smoke: boot the backend, log in as a seeded user
   (e.g. `t.dlamini@example.test` / `SEED_PASSWORD (configured locally)`) for a JWT, then `curl` the endpoint
   (the local DB is seeded). For import-resolution use
   `node --input-type=module -e "await import('./src/routes/x.js')"`. Do not claim a
   database-backed review workflow was verified from the authentication or
-  directory tests alone.
+  directory tests alone, nor live AI, SSO or email from the workflow test.
 - **Windows dev gotcha:** the backend binds `:4000` and only one instance can. Git Bash
   `kill`/`pkill` do **not** reliably stop a backgrounded `node` on Windows (this caused
   `EADDRINUSE` for the user). Free the port with PowerShell:

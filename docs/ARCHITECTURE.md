@@ -32,31 +32,42 @@ separately.
 Every protected route runs `requireAuth` (validates the JWT) and the sensitive ones
 add `requireRole(...)`. Beyond role gates, the reviews routes do **row-level** checks:
 
-- A `MANAGER` can only act on reviews where `review.managerId === user.id`.
-- An `ATTORNEY` only sees reviews where they are the subject — and detailed scores stay
-  hidden until the report is `APPROVED`.
-- A reviewer (peer/client/subordinate) can open a review skeleton but the `analytics`
-  block (scores by competency/source) is returned as `null` unless they are the manager,
-  the subject, or an admin.
+- Only the owning manager or an admin can draft, submit, finalize, approve or send back
+  a review, and never the attorney it is about.
+- An `ATTORNEY` only sees reviews where they are the subject — scores, the breakdown and
+  the final summary stay hidden until the report is `APPROVED`, and drafts always.
+- A reviewer (peer/client/subordinate) can open a review skeleton holding only their own
+  request: no scores, narratives, other reviewers or history.
+- The annual rollup is limited to the attorney, admins, the attorney's line manager and
+  managers who own one of their reviews.
+
+`npm run test:workflow` exercises these rules over real HTTP with fictional accounts, and
+`docs/DEMO.md` walks through them in the browser.
 
 ## Key flows
 
 ### Launch (the "launch button")
 `POST /api/reviews/launch { cycleId }`
-1. Finds/creates the attorney's `PerformanceReview` for that cycle.
-2. Builds the 360 reviewer list (`build360`): self, manager, up to 3 peers in the same
-   practice group, subordinates, and a client.
+1. Requires an open `QUARTERLY` cycle (annual results are the rollup) and a reviewing
+   manager (`managerId`), then finds/creates the attorney's `PerformanceReview`.
+2. Builds the 360 reviewer list (`build360`): self, manager, up to 3 peers who share the
+   practice group and manager, up to 3 direct reports (asked once, as subordinates), and
+   a client.
 3. Creates one `FeedbackRequest` per reviewer.
 4. Stamps `launchedAt` and sets status `LAUNCHED`, then writes a `ReportEvent`.
 
 ### Feedback collection
-Each reviewer submits via `POST /api/feedback/request/:id` — a set of 1–5 ratings across
-the competency framework plus free-text strengths/improvements. On submit, the request
-flips to `SUBMITTED`, which moves the completion rate.
+Each reviewer submits via `POST /api/feedback/request/:id` — a set of whole-number 1–5
+ratings across distinct active competencies plus free-text strengths/improvements.
+Feedback is open from launch until the report is finalized. A resubmission replaces the
+earlier response in one transaction. On submit, the request flips to `SUBMITTED`, which
+moves the completion rate.
 
 ### Report lifecycle
 `DRAFT → IN_REVIEW → FINALIZED → APPROVED`, each transition guarded server-side and
-recorded in the audit trail. Finalizing recomputes and persists the composite score.
+recorded in the audit trail. Finalizing recomputes and persists the composite score and
+closes feedback. The owning manager can send an `IN_REVIEW` or `FINALIZED` report back to
+`DRAFT` with a recorded reason, which reopens feedback and notifies the attorney.
 Approved reports are immutable and feed the annual rollup.
 
 ## Scoring
@@ -112,7 +123,8 @@ The Zoho-style overview (greeting card, "This week" strip, activity feed, avatar
 - `routes/widgets.js` — server-side proxies for a daily quote (ZenQuotes), office weather
   (Open-Meteo), and public holidays (Nager.Date). All cached in-memory, all degrade to a
   local fallback / empty array on upstream failure. Proxying keeps third parties from seeing
-  individual user IPs/usage (POPIA) and centralizes caching.
+  individual user IPs/usage (POPIA) and centralizes caching. `EXTERNAL_WIDGETS_ENABLED="false"`
+  skips the upstream calls entirely (the disposable demo sets it).
 - `routes/activity.js` — a role-scoped recent-activity feed from `ReportEvent` (clients get
   their notifications instead).
 - Avatars (`frontend/src/components/Avatar.jsx`) use DiceBear but **hash the seed
@@ -130,5 +142,6 @@ This is a faithful, runnable v1. Before going live a firm would want:
 - Tenanting if the platform serves multiple offices/entities.
 - POPIA/GDPR controls: data-subject export, retention windows, and field-level access
   logging (performance data is sensitive personal information).
-- Tests (the route logic is structured to be unit-testable; see `docs/CADENCE.md` for the
-  SLA rules worth covering first).
+- Broader tests. Authentication, directory and one end-to-end quarterly workflow are covered
+  today; SLA/overdue rules (see `docs/CADENCE.md`), goals and the AI layer with a live
+  provider are not.
