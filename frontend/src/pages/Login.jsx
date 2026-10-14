@@ -7,7 +7,11 @@ const DEMO = [
   ["Manager", "t.dlamini@example.test"],
   ["Attorney", "n.khumalo@example.test"],
   ["Attorney (mid-cycle)", "s.naidoo@example.test"],
+  ["Attorney (not launched)", "l.botha@example.test"],
+  ["Candidate attorney", "p.moyo@example.test"],
   ["Client", "client@client.example.test"],
+  ["Manager (Litigation)", "z.mthembu@example.test"],
+  ["Attorney (Litigation)", "j.vanwyk@example.test"],
 ];
 
 export default function Login() {
@@ -52,11 +56,13 @@ export default function Login() {
         </form>
         <div className="demo-logins">
           <p>Demo accounts (use the password configured when seeding):</p>
-          {DEMO.map(([label, mail]) => (
-            <button key={mail} className="demo-btn" onClick={() => setEmail(mail)}>
-              <strong>{label}</strong><span>{mail}</span>
-            </button>
-          ))}
+          <div className="demo-grid">
+            {DEMO.map(([label, mail]) => (
+              <button key={mail} type="button" className="demo-btn" onClick={() => setEmail(mail)}>
+                <strong>{label}</strong><span>{mail}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

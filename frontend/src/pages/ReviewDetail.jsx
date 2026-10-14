@@ -23,6 +23,7 @@ export default function ReviewDetail() {
   const [organizing, setOrganizing] = useState(null);
   const [memory, setMemory] = useState(null);
   const [aiDrafting, setAiDrafting] = useState(false);
+  const [sendBackNote, setSendBackNote] = useState("");
 
   function load() {
     api.get(`/reviews/${id}`).then((d) => { setR(d); setDraft(d.finalSummary || d.draftSummary || ""); }).catch((e) => setErr(e.message));
@@ -38,13 +39,20 @@ export default function ReviewDetail() {
   if (err) return <div className="error">{err}</div>;
   if (!r) return <div className="loading">Loading review…</div>;
 
-  const isManager = (user.role === "MANAGER" && r.manager?.id === user.id) || user.role === "ADMIN";
+  // The server decides what each viewer receives; these flags only pick the layout.
+  const isSubject = r.subject.id === user.id;
+  const isManager = !isSubject && ((user.role === "MANAGER" && r.manager?.id === user.id) || user.role === "ADMIN");
   const locked = ["FINALIZED", "APPROVED"].includes(r.status);
   const themes = memory?.themes ? safeParse(memory.themes) : [];
 
   async function act(path, body) {
     setBusy(true); setErr(null);
-    try { await api.post(`/reviews/${id}/${path}`, body); toast(`Review ${path.replace("-", " ")}d`, "success"); load(); }
+    try {
+      await api.post(`/reviews/${id}/${path}`, body);
+      toast(ACTION_DONE[path], "success");
+      if (path === "send-back") setSendBackNote("");
+      load();
+    }
     catch (e) { setErr(e.message); toast(e.message, "error"); }
     finally { setBusy(false); }
   }
@@ -96,7 +104,7 @@ export default function ReviewDetail() {
         <div className="detail-head-right">
           <StatusPill status={r.status} />
           <ScoreBadge score={r.analytics?.overallScore ?? r.overallScore} />
-          {r.status === "APPROVED" && <button className="btn small" onClick={downloadReport}>Download PDF</button>}
+          {r.status === "APPROVED" && r.analytics && <button className="btn small" onClick={downloadReport}>Download PDF</button>}
         </div>
       </div>
 
@@ -193,7 +201,13 @@ export default function ReviewDetail() {
             )}
           </div>
         ) : (
-          <div className="card"><p className="muted">Detailed scores are visible to the manager and the attorney only.</p></div>
+          <div className="card">
+            <p className="muted">
+              {isSubject
+                ? "Your scores, competency breakdown and the manager's summary appear here once the report is approved."
+                : "Scores and the written report are visible only to the attorney (after approval), the owning manager and administrators."}
+            </p>
+          </div>
         )}
       </div>
 
@@ -225,9 +239,23 @@ export default function ReviewDetail() {
               <button className="btn primary" disabled={busy} onClick={() => act("finalize", { finalSummary: draft })}>Finalize</button>
             )}
             {r.status === "FINALIZED" && <button className="btn primary" disabled={busy} onClick={() => act("approve")}>Approve (lock)</button>}
-            {locked && r.status !== "APPROVED" && <button className="btn ghost" disabled={busy} onClick={() => act("send-back")}>Send back to draft</button>}
             {r.status === "APPROVED" && <span className="pill green">Approved & locked — feeds annual rollup</span>}
           </div>
+          {(r.status === "IN_REVIEW" || r.status === "FINALIZED") && (
+            <div className="workflow-actions">
+              <input
+                className="send-back-note"
+                aria-label="Reason for sending back"
+                value={sendBackNote}
+                maxLength={1000}
+                onChange={(e) => setSendBackNote(e.target.value)}
+                placeholder="Reason for sending back (recorded in the history)"
+              />
+              <button className="btn ghost" disabled={busy} onClick={() => act("send-back", { note: sendBackNote.trim() || undefined })}>
+                Send back to draft
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -249,23 +277,32 @@ export default function ReviewDetail() {
         </div>
       )}
 
-      {/* Audit trail */}
-      <div className="card">
-        <div className="card-head"><h2>History</h2></div>
-        <ol className="timeline">
-          {r.events.map((e) => (
-            <li key={e.id}>
-              <span className="dot" />
-              <div><strong>{prettyAction(e.action)}</strong> by {e.actor}{e.note ? ` — ${e.note}` : ""}
-                <small>{new Date(e.at).toLocaleString()}</small></div>
-            </li>
-          ))}
-          {r.events.length === 0 && <p className="muted">No activity yet.</p>}
-        </ol>
-      </div>
+      {/* Audit trail (the attorney, owning manager and admins only) */}
+      {(isManager || isSubject) && (
+        <div className="card">
+          <div className="card-head"><h2>History</h2></div>
+          <ol className="timeline">
+            {r.events.map((e) => (
+              <li key={e.id}>
+                <span className="dot" />
+                <div><strong>{prettyAction(e.action)}</strong> by {e.actor}{e.note ? ` — ${e.note}` : ""}
+                  <small>{new Date(e.at).toLocaleString()}</small></div>
+              </li>
+            ))}
+            {r.events.length === 0 && <p className="muted">No activity yet.</p>}
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
+
+const ACTION_DONE = {
+  submit: "Report submitted for review",
+  finalize: "Report finalized",
+  approve: "Report approved",
+  "send-back": "Report sent back to draft",
+};
 
 function prettyAction(a) {
   return ({ LAUNCHED: "Launched", DRAFT_SAVED: "Draft saved", SUBMITTED: "Submitted for review", FINALIZED: "Finalized", APPROVED: "Approved", SENT_BACK: "Sent back" })[a] || a;

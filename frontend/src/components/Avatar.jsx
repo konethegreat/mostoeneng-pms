@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 
 const STYLE = "notionists-neutral";
 const SALT = "mostoeneng-avatar-v1";
+// The disposable demo build sets this so avatars stay local monograms.
+const LOCAL_ONLY = import.meta.env.VITE_LOCAL_AVATARS === "true";
 
 async function hashSeed(raw) {
   if (!globalThis.crypto?.subtle) throw new Error("no subtle crypto");
@@ -23,13 +25,14 @@ export function Avatar({ seed, name, size = 36 }) {
   const initial = (name || "?").trim().charAt(0).toUpperCase() || "?";
 
   useEffect(() => {
+    if (LOCAL_ONLY) return undefined;
     let on = true;
     hashSeed(raw).then((h) => on && setHash(h)).catch(() => on && setFailed(true));
     return () => { on = false; };
   }, [raw]);
 
-  // Monogram while hashing or on any failure — no third-party request is made.
-  if (failed || !hash) {
+  // Monogram while hashing, on any failure or in local-only mode — no third-party request is made.
+  if (LOCAL_ONLY || failed || !hash) {
     return (
       <span className="avatar avatar-fallback" style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden="true">
         {initial}

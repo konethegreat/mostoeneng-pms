@@ -29,7 +29,8 @@ export default function Admin() {
         periodStart: form.periodStart,
         periodEnd: form.periodEnd,
         slaDays: Number(form.slaDays),
-        parentId: form.parentId || null,
+        // Only quarterly cycles roll up into an annual cycle.
+        parentId: form.type === "QUARTERLY" && form.parentId ? form.parentId : null,
       });
       toast("Cycle created", "success");
       setForm({ name: "", type: "QUARTERLY", periodStart: "", periodEnd: "", slaDays: 30, parentId: "" });

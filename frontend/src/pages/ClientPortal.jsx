@@ -29,7 +29,8 @@ export default function ClientPortal() {
   if (err) return <div className="error">{err}</div>;
   if (!items) return <div className="loading">Loading…</div>;
 
-  const pending = items.filter((i) => !i.submitted);
+  // Requests on a finalized report are closed and no longer outstanding.
+  const pending = items.filter((i) => !i.submitted && i.open);
 
   return (
     <div>
@@ -63,7 +64,7 @@ export default function ClientPortal() {
               <div className="feedback-row-actions">
                 <StatusPill status="SUBMITTED" />
                 <button className="btn small" onClick={() => downloadFeedback(i.id, i.subject.name)}>Download PDF</button>
-                <Link className="btn small" to={`/feedback/${i.id}`}>Edit</Link>
+                <Link className="btn small" to={`/feedback/${i.id}`}>{i.open ? "Edit" : "View"}</Link>
               </div>
             </div>
           ))}

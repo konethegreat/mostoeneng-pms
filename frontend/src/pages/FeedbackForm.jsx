@@ -46,6 +46,8 @@ export default function FeedbackForm() {
   if (!form) return <div className="loading">Loading form…</div>;
 
   const allRated = form.competencies.every((c) => scores[c.id]);
+  // Finalized or approved reports no longer accept feedback; show answers read-only.
+  const closed = form.open === false;
 
   async function submit() {
     setBusy(true); setErr(null);
@@ -78,6 +80,11 @@ export default function FeedbackForm() {
     <div className="form-page">
       <h1>{heading}</h1>
       <p className="subtitle">Rate each competency on a 1–5 scale. Comments are optional but valued.</p>
+      {closed && (
+        <div className="notice">
+          This report has been finalized, so feedback is closed. {form.existing ? "Your submitted answers are shown read-only." : "No answers were submitted."}
+        </div>
+      )}
 
       <div className="card">
         {form.competencies.map((c) => (
@@ -92,6 +99,9 @@ export default function FeedbackForm() {
                   key={val}
                   className={`scale-btn ${scores[c.id] === val ? "selected" : ""}`}
                   onClick={() => setScores({ ...scores, [c.id]: val })}
+                  disabled={closed}
+                  aria-pressed={scores[c.id] === val}
+                  aria-label={`${c.name}: ${val} — ${label}`}
                   title={label}
                 >
                   {val}
@@ -104,13 +114,13 @@ export default function FeedbackForm() {
 
       <div className="card">
         <label>Key strengths
-          <textarea value={strengths} onChange={(e) => setStrengths(e.target.value)} rows={3} placeholder="What is this person doing well?" />
+          <textarea value={strengths} disabled={closed} onChange={(e) => setStrengths(e.target.value)} rows={3} placeholder="What is this person doing well?" />
         </label>
         <label>Areas to improve
-          <textarea value={improvements} onChange={(e) => setImprovements(e.target.value)} rows={3} placeholder="Where should they focus to grow?" />
+          <textarea value={improvements} disabled={closed} onChange={(e) => setImprovements(e.target.value)} rows={3} placeholder="Where should they focus to grow?" />
         </label>
 
-        {aiEnabled && (
+        {aiEnabled && !closed && (
           <div className="ai-actions">
             <button className="btn ai" disabled={checking || (!strengths && !improvements)} onClick={runBiasCheck}>
               {checking ? "Checking…" : "✦ Check before submit"}
@@ -145,12 +155,14 @@ export default function FeedbackForm() {
 
       {err && <div className="error">{err}</div>}
       <div className="form-actions">
-        <button className="btn ghost" onClick={() => nav("/feedback")}>Cancel</button>
-        <button className="btn primary" disabled={!allRated || busy} onClick={submit}>
-          {busy ? "Submitting…" : "Submit feedback"}
-        </button>
+        <button className="btn ghost" onClick={() => nav("/feedback")}>{closed ? "Back" : "Cancel"}</button>
+        {!closed && (
+          <button className="btn primary" disabled={!allRated || busy} onClick={submit}>
+            {busy ? "Submitting…" : "Submit feedback"}
+          </button>
+        )}
       </div>
-      {!allRated && <p className="muted small">Rate all {form.competencies.length} competencies to submit.</p>}
+      {!closed && !allRated && <p className="muted small">Rate all {form.competencies.length} competencies to submit.</p>}
     </div>
   );
 }
