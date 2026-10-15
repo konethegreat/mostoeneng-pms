@@ -71,7 +71,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - name: Generate ephemeral signing and seed credentials
-        run: node -e "const f=require('node:fs'),c=require('node:crypto'); for (const k of ['JWT_SECRET','SEED_PASSWORD']) f.appendFileSync(process.env.GITHUB_ENV,k+'='+c.randomBytes(32).toString('hex')+'\n')"
+        run: node -e "const f=require('node:fs'),c=require('node:crypto'); for (const k of ['JWT_SECRET','SEED_PASSWORD']) { const v=c.randomBytes(32).toString('hex'); console.log('::add-mask::'+v); f.appendFileSync(process.env.GITHUB_ENV,k+'='+v+'\n') }"
       - run: npm run db:push
       - run: npm run db:seed
       - run: npm run test:directory
